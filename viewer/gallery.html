@@ -362,7 +362,11 @@
             pOptions.querySelector('[data-val="all"]').onclick = (e) => {
                 e.stopPropagation();
                 selectedPack = 'all';
-                document.getElementById('selected-pack').innerHTML = `<span>전체 팩 (All Packs)</span><span style="font-size: 0.7rem; color: #cbd5e1;">▼</span>`;
+                document.getElementById('selected-pack').innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span>전체 팩 (All Packs)</span>
+                    </div>
+                    <span style="font-size: 0.7rem; color: #cbd5e1;">▼</span>`;
                 pOptions.classList.remove('active');
                 applyFilters();
             };
@@ -377,7 +381,11 @@
                 item.onclick = (e) => {
                     e.stopPropagation();
                     selectedPack = s;
-                    document.getElementById('selected-pack').innerHTML = `<img src="${logoUrl}"> <span>${s}</span>`;
+                    document.getElementById('selected-pack').innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <img src="${logoUrl}"> <span>${s}</span>
+                        </div>
+                        <span style="font-size: 0.7rem; color: #cbd5e1;">▼</span>`;
                     pOptions.classList.remove('active');
                     applyFilters();
                 };
