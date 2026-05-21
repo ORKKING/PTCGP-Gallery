@@ -370,13 +370,16 @@
             CONFIG.SETS.forEach(s => {
                 const item = document.createElement('div');
                 item.className = 'option-item';
-                const isEn = ["B1a", "B2", "B2a", "B2b", "B3"].includes(s);
-                const logoUrl = `${ICONS_PATH}packs/LOGO_expansion_${s}_${isEn ? "en_US" : "ko_KR"}.webp`;
-                item.innerHTML = `<img src="${logoUrl}" onerror="this.style.display='none'"> <span>${s}</span>`;
+                
+                // 새로운 명명 규칙: {set_code}.webp (B시리즈 등 일부는 .png일 수 있으므로 처리)
+                const ext = (s.startsWith('B') || s === 'P-B') ? 'png' : 'webp';
+                const logoUrl = `${ICONS_PATH}packs/${s}.${ext}`;
+                
+                item.innerHTML = `<img src="${logoUrl}" onerror="this.src='${ICONS_PATH}packs/${s}.png'; this.onerror=null;"> <span>${s}</span>`;
                 item.onclick = (e) => {
                     e.stopPropagation();
                     selectedPack = s;
-                    document.getElementById('selected-pack').innerHTML = `<img src="${logoUrl}"> <span>${s}</span>`;
+                    document.getElementById('selected-pack').innerHTML = `<img src="${logoUrl}" onerror="this.src='${ICONS_PATH}packs/${s}.png'; this.onerror=null;"> <span>${s}</span>`;
                     pOptions.classList.remove('active');
                     applyFilters();
                 };
