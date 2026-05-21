@@ -1,0 +1,13 @@
+# PTCGP Gallery Ignore List
+
+# 작업용 도구 및 스크립트 제외
+tools/
+scripts/
+
+# 임시 폴더 제외
+temp/
+
+# 시스템 및 잡동사니
+.DS_Store
+Thumbs.db
+*.log

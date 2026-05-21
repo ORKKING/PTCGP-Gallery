@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTCGP 로컬 갤러리 v6</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-color: #ffffff;
+            --accent-color: #1e293b;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --card-width: 180px;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+        }
+
+        /* 상단 바 */
+        .top-bar {
+            height: 70px; background-color: #ffffff;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .left-controls { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .right-controls { display: flex; align-items: center; gap: 10px; }
+
+        /* 커스텀 팩 셀렉터 */
+        .custom-dropdown {
+            position: relative;
+            min-width: 220px;
+            background: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            transition: 0.2s;
+        }
+        .custom-dropdown:hover { border-color: var(--text-muted); }
+
+        .selected-option {
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .selected-option img { height: 24px; object-fit: contain; }
+
+        .dropdown-options {
+            position: absolute;
+            top: 115%;
+            left: 0;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            max-height: 450px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1001;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .dropdown-options.active { display: block; }
+
+        .option-item {
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .option-item:last-child { border-bottom: none; }
+        .option-item:hover { background: #f8fafc; }
+        .option-item img { height: 28px; width: 55px; object-fit: contain; }
+        .option-item span { font-size: 0.85rem; font-weight: 600; }
+
+        input[type="text"] {
+            background: #fff; border: 1px solid #cbd5e1;
+            color: var(--text-main); padding: 10px 15px; border-radius: 10px; outline: none; width: 220px;
+            font-size: 0.9rem;
+        }
+
+        .expand-btn {
+            background: #fff; border: 1px solid #000; color: #000;
+            width: 42px; height: 42px; border-radius: 10px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: bold; transition: 0.3s;
+        }
+        .expand-btn.active { transform: rotate(90deg); background: #000; color: #fff; }
+
+        /* 필터 패널 */
+        .filter-panel {
+            background-color: var(--panel-color);
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 0 20px; border-bottom: 1px solid #000;
+        }
+        .filter-panel.active { max-height: 500px; padding: 25px 20px; }
+
+        .filter-section { margin-bottom: 20px; }
+        .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .filter-title { font-size: 0.75rem; font-weight: 800; color: #000; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .all-btn { 
+            background: #fff; border: 1px solid #000; color: #000; 
+            padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; 
+            cursor: pointer; font-weight: bold;
+        }
+        .all-btn:hover { background: #000; color: #fff; }
+
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        
+        .check-item { 
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; background: #fff; 
+            min-width: 44px; height: 44px; border-radius: 10px;
+            transition: 0.2s; border: 1px solid #ccc; padding: 0 10px;
+        }
+        .check-item input { display: none; }
+        .check-item.active { border-color: #000; background: #f0f0f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .rarity-icons-container { display: flex; gap: 2px; }
+        .rarity-icons-container img { height: 14px; width: auto; }
+
+        .inline-energy {
+            width: 1.1em; height: 1.1em; vertical-align: middle; margin: 0 2px;
+            position: relative; top: -1px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+        }
+
+        .energy-icon-filter { width: 22px; height: 22px; object-fit: contain; }
+
+        .main-container { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
+        #gallery-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+            gap: 25px; justify-items: center;
+        }
+
+        .card-box {
+            position: relative;
+            width: var(--card-width); background: #fff;
+            border-radius: 15px; overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            border: 1px solid #ccc;
+        }
+        .card-box:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); border-color: #000; }
+        .card-box img { width: 100%; aspect-ratio: 2/2.8; object-fit: contain; background: #fff; }
+        
+        .zoom-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(255,255,255,0.9);
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: 0.2s; z-index: 10;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); border: 1px solid #000;
+        }
+        .zoom-btn img { width: 18px; height: 18px; }
+        .card-box:hover .zoom-btn { opacity: 1; }
+
+        .card-info { padding: 12px; text-align: center; border-top: 1px solid #ccc; }
+        .card-name { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; color: #000; }
+        .card-meta { font-size: 0.7rem; color: #666; font-weight: 500; }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 3000;
+            align-items: center; justify-content: center; backdrop-filter: blur(5px);
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #fff; width: 95%; max-width: 850px; max-height: 90vh;
+            border-radius: 24px; position: relative; padding: 40px;
+            display: flex; gap: 40px; overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25); border: 2px solid #000;
+        }
+        .close-btn { position: absolute; top: 20px; right: 25px; font-size: 2rem; cursor: pointer; color: #000; transition: 0.2s; line-height: 1; font-weight: bold; }
+        .close-btn:hover { transform: scale(1.1); }
+        .modal-left { flex-shrink: 0; }
+        .modal-left img { width: 320px; border-radius: 18px; border: 1px solid #ccc; }
+        .modal-right { flex: 1; padding-top: 10px; color: #000; }
+        .modal-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; color: #000; }
+        .modal-meta { font-size: 0.95rem; color: #666; margin-bottom: 25px; font-weight: 600; padding-bottom: 15px; border-bottom: 1px solid #ccc; }
+        .section-box { margin-bottom: 25px; }
+        .section-label { font-size: 0.75rem; font-weight: 800; color: #666; text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        .hp-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 20px; }
+        .hp-label { font-size: 1rem; font-weight: 800; color: #000; }
+        .hp-val { font-size: 1.6rem; font-weight: 900; color: #000; }
+        .attack-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 12px; background: #fff; }
+        .energy-icons { display: flex; gap: 4px; min-width: 60px; padding-top: 3px; flex-wrap: wrap; }
+        .energy-mini { width: 18px; height: 18px; object-fit: contain; }
+        .atk-main { flex: 1; }
+        .atk-name-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .atk-name { font-size: 1.1rem; font-weight: 800; color: #000; }
+        .atk-damage { font-size: 1.1rem; font-weight: 900; color: #000; }
+        .atk-effect { font-size: 0.85rem; color: #333; line-height: 1.5; font-weight: 500; }
+        .ability-box { border: 1px solid #ccc; padding: 15px; border-radius: 12px; margin-bottom: 20px; background: #fff; }
+        .ability-name { color: #000; font-weight: 800; font-size: 1rem; margin-bottom: 5px; display: block; }
+        .ability-text { font-size: 0.85rem; color: #333; line-height: 1.5; font-weight: 500; }
+        .footer-stats { display: flex; gap: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
+        .stat-item { display: flex; flex-direction: column; gap: 8px; }
+        .stat-label { font-size: 0.7rem; font-weight: 800; color: #666; }
+        .stat-icons { display: flex; gap: 4px; align-items: center; }
+
+        #db-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: #ffffff; display: flex; align-items: center; justify-content: center; z-index: 2000;
+        }
+        .db-box { background: #fff; padding: 50px; border-radius: 30px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.08); border: 1px solid #f1f5f9; }
+    </style>
+</head>
+<body>
+
+    <div id="db-overlay">
+        <div class="db-box">
+            <h1 style="color:#000; font-weight: 900; font-size: 2.2rem; margin-bottom: 10px;">Pocket Gallery</h1>
+            <p style="color:var(--text-muted); margin-bottom:30px; font-weight: 500;">관리자용 JSON 데이터베이스를 로드하세요.</p>
+            <input type="file" id="db-input" accept=".json">
+        </div>
+    </div>
+
+    <div class="top-bar">
+        <div class="left-controls">
+            <div class="custom-dropdown" id="pack-dropdown">
+                <div class="selected-option" id="selected-pack">
+                    <span>전체 팩 (All Packs)</span>
+                    <span style="font-size: 0.7rem; color: #cbd5e1;">▼</span>
+                </div>
+                <div class="dropdown-options" id="pack-options"></div>
+            </div>
+        </div>
+        <div class="right-controls">
+            <input type="text" id="search-input" placeholder="포켓몬 또는 기술 이름 검색...">
+            <button class="expand-btn" id="filter-toggle">&gt;&gt;</button>
+        </div>
+    </div>
+
+    <div class="filter-panel" id="filter-panel">
+        <div class="filter-section">
+            <div class="filter-header">
+                <span class="filter-title">에너지 타입</span>
+                <button class="all-btn" onclick="toggleAll('energy-filters')">ALL</button>
+            </div>
+            <div class="checkbox-group" id="energy-filters"></div>
+        </div>
+        <div class="filter-section">
+            <div class="filter-header">
+                <span class="filter-title">레어도 등급</span>
+                <button class="all-btn" onclick="toggleAll('rarity-filters')">ALL</button>
+            </div>
+            <div class="checkbox-group" id="rarity-filters"></div>
+        </div>
+        <div class="filter-section">
+            <div class="filter-header">
+                <span class="filter-title">카드 종류</span>
+                <button class="all-btn" onclick="toggleAll('cat-filters')">ALL</button>
+            </div>
+            <div class="checkbox-group" id="cat-filters">
+                <!-- JS에서 동적으로 생성됨 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div id="gallery-grid"></div>
+    </div>
+
+    <div id="card-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div class="modal-left">
+                <img id="modal-img" src="">
+            </div>
+            <div class="modal-right">
+                <div id="modal-title" class="modal-title"></div>
+                <div id="modal-meta" class="modal-meta"></div>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // [설정 영역] 모든 주소와 핵심 데이터는 여기서 관리
+        const CONFIG = {
+            ASSET_BASE: "../assets/", // 깃허브 배포 시 "https://raw.githubusercontent.com/사용자/저장소/main/assets/" 형식으로 수정
+            SETS: ["A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b", "B1", "B1a", "B2", "B2a", "B2b", "B3", "P-A", "P-B"],
+            ENERGIES: ["GR", "FI", "WA", "LI", "PS", "FT", "DA", "ST", "CO", "DR"],
+            RARITIES: ["C", "U", "R", "RR", "AR", "SR", "IM", "UR", "S", "SSR", "PROMO"],
+            CATEGORIES: ["Pokemon", "Item", "Tool", "Stadium", "Support"], // DB의 category 필드와 매칭
+            PAGE_SIZE: 50
+        };
+
+        // 레어도 아이콘 매핑
+        const RARITY_MAP = {
+            "C": { icon: "diamond", count: 1 },
+            "U": { icon: "diamond", count: 2 },
+            "R": { icon: "diamond", count: 3 },
+            "RR": { icon: "diamond", count: 4 },
+            "AR": { icon: "star", count: 1 },
+            "SR": { icon: "star", count: 2, label: "SR/SAR" },
+            "SAR": { icon: "star", count: 2 }, 
+            "IM": { icon: "star", count: 3 },
+            "UR": { icon: "crown", count: 1 },
+            "S": { icon: "shiny-star", count: 1 },
+            "SSR": { icon: "shiny-star", count: 2 },
+            "PROMO": { text: "PROMO" }
+        };
+
+        let cardData = [];
+        let filteredData = []; 
+        let displayedCount = 0; 
+        let selectedPack = 'all';
+
+        const ICONS_PATH = CONFIG.ASSET_BASE + "icons/";
+        const CARDS_PATH = CONFIG.ASSET_BASE + "cards/";
+
+        function getEnergyHtml(codes, size="mini") {
+            if (!codes) return "";
+            const list = Array.isArray(codes) ? codes : [codes];
+            return list.map(c => `<img src="${ICONS_PATH}energy/${c}.webp" class="energy-${size}">`).join('');
+        }
+
+        function formatDescription(text) {
+            if (!text) return "";
+            return text.replace(/{([A-Z]+)}/g, (match, code) => {
+                return `<img src="${ICONS_PATH}energy/${code}.webp" class="inline-energy" onerror="this.style.display='none'">`;
+            });
+        }
+
+        function initUI() {
+            // 1. 팩 드롭다운 생성
+            const pOptions = document.getElementById('pack-options');
+            pOptions.innerHTML = '<div class="option-item" data-val="all"><span>전체 팩 (All Packs)</span></div>';
+            
+            pOptions.querySelector('[data-val="all"]').onclick = (e) => {
+                e.stopPropagation();
+                selectedPack = 'all';
+                document.getElementById('selected-pack').innerHTML = `<span>전체 팩 (All Packs)</span><span style="font-size: 0.7rem; color: #cbd5e1;">▼</span>`;
+                pOptions.classList.remove('active');
+                applyFilters();
+            };
+
+            CONFIG.SETS.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'option-item';
+                const isEn = ["B1a", "B2", "B2a", "B2b", "B3"].includes(s);
+                const logoUrl = `${ICONS_PATH}packs/LOGO_expansion_${s}_${isEn ? "en_US" : "ko_KR"}.webp`;
+                item.innerHTML = `<img src="${logoUrl}" onerror="this.style.display='none'"> <span>${s}</span>`;
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    selectedPack = s;
+                    document.getElementById('selected-pack').innerHTML = `<img src="${logoUrl}"> <span>${s}</span>`;
+                    pOptions.classList.remove('active');
+                    applyFilters();
+                };
+                pOptions.appendChild(item);
+            });
+
+            document.getElementById('pack-dropdown').onclick = () => pOptions.classList.toggle('active');
+
+            // 2. 필터 생성 (에너지, 레어도, 카테고리)
+            const buildFilter = (id, list, type) => {
+                const container = document.getElementById(id);
+                list.forEach(val => {
+                    const label = document.createElement('label');
+                    label.className = 'check-item active';
+                    label.dataset.val = val;
+                    let content = val;
+                    
+                    if (type === 'energy') {
+                        content = `<img src="${ICONS_PATH}energy/${val}.webp" class="energy-icon-filter">`;
+                    } else if (type === 'rarity') {
+                        const conf = RARITY_MAP[val];
+                        if (conf.text) content = `<span style="font-weight:900; font-size:0.7rem;">${conf.text}</span>`;
+                        else {
+                            content = `<div class="rarity-icons-container">` + 
+                                      Array(conf.count).fill(`<img src="${ICONS_PATH}rarity/${conf.icon}.webp">`).join('') + 
+                                      `</div>` + (conf.label ? `<span style="font-size:0.6rem; margin-left:5px; font-weight:800;">${conf.label}</span>` : "");
+                        }
+                    } else if (type === 'category') {
+                        const labels = {
+                            'Pokemon': '포켓몬',
+                            'Item': '아이템',
+                            'Tool': '도구',
+                            'Stadium': '스타디움',
+                            'Support': '서포터'
+                        };
+                        content = labels[val] || val;
+                    }
+                    
+                    label.innerHTML = `<input type="checkbox" checked>${content}`;
+                    label.onclick = function() {
+                        const cb = this.querySelector('input');
+                        cb.checked = !cb.checked;
+                        this.classList.toggle('active', cb.checked);
+                        applyFilters();
+                    };
+                    container.appendChild(label);
+                });
+            };
+
+            buildFilter('energy-filters', CONFIG.ENERGIES, 'energy');
+            buildFilter('rarity-filters', CONFIG.RARITIES, 'rarity');
+            buildFilter('cat-filters', CONFIG.CATEGORIES, 'category');
+
+            document.querySelector('.main-container').onscroll = function(e) {
+                const { scrollTop, scrollHeight, clientHeight } = e.target;
+                if (scrollTop + clientHeight >= scrollHeight - 300) loadMoreCards();
+            };
+        }
+
+        function toggleAll(groupId) {
+            const container = document.getElementById(groupId);
+            const items = container.querySelectorAll('.check-item');
+            const checkboxes = container.querySelectorAll('input');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            const newState = !allChecked; 
+            checkboxes.forEach(cb => cb.checked = newState);
+            items.forEach(item => item.classList.toggle('active', newState));
+            applyFilters();
+        }
+
+        document.getElementById('db-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                cardData = JSON.parse(event.target.result);
+                document.getElementById('db-overlay').style.display = 'none';
+                applyFilters();
+            };
+            reader.readAsText(file);
+        };
+
+        function applyFilters() {
+            if (cardData.length === 0) return;
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const activeEnergies = Array.from(document.querySelectorAll('#energy-filters .check-item.active')).map(i => i.dataset.val);
+            const activeRarities = Array.from(document.querySelectorAll('#rarity-filters .check-item.active')).map(i => i.dataset.val);
+            const activeCats = Array.from(document.querySelectorAll('#cat-filters .check-item.active')).map(i => i.dataset.val);
+
+            filteredData = cardData.filter(c => {
+                if (selectedPack !== 'all' && c.set !== selectedPack) return false;
+                
+                const searchable = (c.name + " " + (c.attacks || []).map(a => a.name).join(' ')).toLowerCase();
+                if (query && !searchable.includes(query)) return false;
+
+                if (!activeCats.includes(c.category)) return false;
+                if (c.category === "Pokemon" && !activeEnergies.includes(c.type)) return false;
+                
+                let targetRarity = c.rarity;
+                if (targetRarity === "SAR" && activeRarities.includes("SR")) return true;
+                if (!activeRarities.includes(targetRarity)) return false;
+                return true;
+            });
+
+            const grid = document.getElementById('gallery-grid');
+            grid.innerHTML = ''; displayedCount = 0;
+            loadMoreCards();
+            document.querySelector('.main-container').scrollTop = 0;
+        }
+
+        function loadMoreCards() {
+            if (displayedCount >= filteredData.length) return;
+            const grid = document.getElementById('gallery-grid');
+            const nextBatch = filteredData.slice(displayedCount, displayedCount + CONFIG.PAGE_SIZE);
+
+            nextBatch.forEach(card => {
+                const box = document.createElement('div');
+                box.className = 'card-box';
+                const imgSrc = `${CARDS_PATH}${card.set}/${card.id}.webp`;
+                
+                box.innerHTML = `
+                    <div class="zoom-btn" onclick="openModal('${card.id}', '${card.set}')">
+                        <img src="${ICONS_PATH}icons/돋보기.svg" alt="zoom">
+                    </div>
+                    <img src="${imgSrc}" loading="lazy" onerror="this.src='${ICONS_PATH}energy/CO.webp'; this.style.opacity='0.2';">
+                    <div class="card-info">
+                        <div class="card-name">${card.name}</div>
+                        <div class="card-meta">${card.set} | ${card.rarity || 'NONE'}</div>
+                    </div>
+                `;
+                grid.appendChild(box);
+            });
+            displayedCount += nextBatch.length;
+        }
+
+        function openModal(id, set) {
+            const card = cardData.find(c => c.id === id && c.set === set);
+            if (!card) return;
+            
+            document.getElementById('modal-img').src = `${CARDS_PATH}${card.set}/${card.id}.webp`;
+            document.getElementById('modal-title').innerText = card.name;
+            document.getElementById('modal-meta').innerText = `${card.set} | ${card.rarity}`;
+            
+            let html = "";
+            if(card.hp) html += `<div class="hp-row"><span class="hp-label">HP</span><span class="hp-val">${card.hp}</span></div>`;
+
+            if(card.ability) {
+                const colonIndex = card.ability.indexOf(':');
+                if (colonIndex !== -1) {
+                    const abName = card.ability.substring(0, colonIndex).trim();
+                    const abText = card.ability.substring(colonIndex + 1).trim();
+                    html += `<div class="ability-box">
+                        <span class="ability-name">● ${abName}</span>
+                        <span class="ability-text">${formatDescription(abText)}</span>
+                    </div>`;
+                } else {
+                    html += `<div class="ability-box">
+                        <span class="ability-text">${formatDescription(card.ability.trim())}</span>
+                    </div>`;
+                }
+            }
+
+            if(card.attacks && card.attacks.length > 0) {
+                html += `<div class="section-box"><span class="section-label">기술 (Attacks)</span>`;
+                card.attacks.forEach(atk => {
+                    html += `
+                        <div class="attack-row">
+                            <div class="energy-icons">${getEnergyHtml(atk.cost)}</div>
+                            <div class="atk-main">
+                                <div class="atk-name-row">
+                                    <span class="atk-name">${atk.name}</span>
+                                    <span class="atk-damage">${atk.damage || ''}</span>
+                                </div>
+                                ${atk.effect ? `<div class="atk-effect">${formatDescription(atk.effect)}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            html += `<div class="footer-stats">`;
+            if(card.weakness) html += `<div class="stat-item"><span class="stat-label">약점</span><div class="stat-icons">${getEnergyHtml(card.weakness.type)}</div></div>`;
+            if(card.retreatCost) html += `<div class="stat-item"><span class="stat-label">후퇴</span><div class="stat-icons">${getEnergyHtml(card.retreatCost)}</div></div>`;
+            html += `</div>`;
+            
+            document.getElementById('modal-body').innerHTML = html;
+            document.getElementById('card-modal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('card-modal').classList.remove('active'); }
+
+        document.getElementById('filter-toggle').onclick = function() {
+            this.classList.toggle('active');
+            document.getElementById('filter-panel').classList.toggle('active');
+        };
+        document.getElementById('search-input').oninput = applyFilters;
+
+        window.onclick = (e) => {
+            if (!e.target.closest('#pack-dropdown')) document.getElementById('pack-options').classList.remove('active');
+            if (e.target.id === 'card-modal') closeModal();
+        };
+
+        initUI();
+    </script>
+</body>
+</html>
