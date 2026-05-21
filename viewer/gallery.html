@@ -371,15 +371,13 @@
                 const item = document.createElement('div');
                 item.className = 'option-item';
                 
-                // 새로운 명명 규칙: {set_code}.webp (B시리즈 등 일부는 .png일 수 있으므로 처리)
-                const ext = (s.startsWith('B') || s === 'P-B') ? 'png' : 'webp';
-                const logoUrl = `${ICONS_PATH}packs/${s}.${ext}`;
+                const logoUrl = `${ICONS_PATH}packs/${s}.webp`;
                 
-                item.innerHTML = `<img src="${logoUrl}" onerror="this.src='${ICONS_PATH}packs/${s}.png'; this.onerror=null;"> <span>${s}</span>`;
+                item.innerHTML = `<img src="${logoUrl}" onerror="this.style.display='none'"> <span>${s}</span>`;
                 item.onclick = (e) => {
                     e.stopPropagation();
                     selectedPack = s;
-                    document.getElementById('selected-pack').innerHTML = `<img src="${logoUrl}" onerror="this.src='${ICONS_PATH}packs/${s}.png'; this.onerror=null;"> <span>${s}</span>`;
+                    document.getElementById('selected-pack').innerHTML = `<img src="${logoUrl}"> <span>${s}</span>`;
                     pOptions.classList.remove('active');
                     applyFilters();
                 };
